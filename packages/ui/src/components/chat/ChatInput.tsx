@@ -57,6 +57,7 @@ import { useThemeSystem } from '@/contexts/useThemeSystem';
 import { GitHubIssuePickerDialog } from '@/components/session/GitHubIssuePickerDialog';
 import { GitHubPrPickerDialog } from '@/components/session/GitHubPrPickerDialog';
 import { Icon } from "@/components/icon/Icon";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { DraftPresetChips } from './DraftPresetChips';
 import { useChatSearchDirectory } from '@/hooks/useChatSearchDirectory';
 import { opencodeClient } from '@/lib/opencode/client';
@@ -1052,11 +1053,15 @@ const ChatInputComponent: React.FC<ChatInputProps> = ({ onOpenSettings, scrollTo
     const setActiveProjectIdOnly = useProjectsStore((state) => state.setActiveProjectIdOnly);
     const [reviewDialogOpen, setReviewDialogOpen] = React.useState(false);
     const [reviewFlowSubmitting, setReviewFlowSubmitting] = React.useState(false);
+    const [contextLimitConfirmOpen, setContextLimitConfirmOpen] = React.useState(false);
+    const pendingSubmitOptionsRef = React.useRef<SubmitOptions | undefined>(undefined);
 
     const currentProviderId = useConfigStore((state) => state.currentProviderId);
     const currentModelId = useConfigStore((state) => state.currentModelId);
     const currentVariant = useConfigStore((state) => state.currentVariant);
     const currentAgentName = useConfigStore((state) => state.currentAgentName);
+    const getCurrentModel = useConfigStore((state) => state.getCurrentModel);
+    const getContextUsage = useSessionUIStore((state) => state.getContextUsage);
     const setAgent = useConfigStore((state) => state.setAgent);
     const getVisibleAgents = useConfigStore((state) => state.getVisibleAgents);
     const agents = getVisibleAgents();
@@ -1699,6 +1704,7 @@ const ChatInputComponent: React.FC<ChatInputProps> = ({ onOpenSettings, scrollTo
         queuedOnly?: boolean;
         queuedMessageId?: string;
         delivery?: 'steer';
+        skipContextLimitCheck?: boolean;
     };
     const handleSubmitRef = React.useRef<(options?: SubmitOptions) => Promise<void>>(async () => {});
 
@@ -1796,6 +1802,23 @@ const ChatInputComponent: React.FC<ChatInputProps> = ({ onOpenSettings, scrollTo
         if (!providerIdToSend || !modelIdToSend) {
             console.warn('Cannot send message: provider or model not selected');
             return;
+        }
+
+        // Check context usage before sending (skip for queued-only auto-send and confirmed retries)
+        if (currentSessionId && !queuedOnly && !options?.skipContextLimitCheck) {
+            const currentModel = getCurrentModel();
+            const limit = currentModel && typeof currentModel.limit === 'object' && currentModel.limit !== null
+                ? (currentModel.limit as Record<string, unknown>)
+                : null;
+            const contextLimit = (limit && typeof limit.context === 'number' ? limit.context : 0);
+            const outputLimit = (limit && typeof limit.output === 'number' ? limit.output : 0);
+            const contextUsage = getContextUsage(contextLimit, outputLimit);
+
+            if (contextUsage && contextUsage.totalTokens >= 100000) {
+                pendingSubmitOptionsRef.current = options;
+                setContextLimitConfirmOpen(true);
+                return;
+            }
         }
 
         // Sending is authoritative: if a question prompt is open, dismiss it
@@ -2289,6 +2312,18 @@ const ChatInputComponent: React.FC<ChatInputProps> = ({ onOpenSettings, scrollTo
             textareaRef.current?.focus();
         }
     };
+
+    const handleContextLimitConfirm = React.useCallback(() => {
+        setContextLimitConfirmOpen(false);
+        const savedOptions = pendingSubmitOptionsRef.current;
+        pendingSubmitOptionsRef.current = undefined;
+        void handleSubmitRef.current({ ...savedOptions, skipContextLimitCheck: true });
+    }, []);
+
+    const handleContextLimitCancel = React.useCallback(() => {
+        setContextLimitConfirmOpen(false);
+        pendingSubmitOptionsRef.current = undefined;
+    }, []);
 
     // Update ref with latest handleSubmit on every render
     handleSubmitRef.current = handleSubmit;
@@ -4673,6 +4708,51 @@ const ChatInputComponent: React.FC<ChatInputProps> = ({ onOpenSettings, scrollTo
             onOpenChange={handleAttachmentPreviewOpenChange}
             isMobile={isMobile}
         />
+        <Dialog open={contextLimitConfirmOpen} onOpenChange={(open) => { if (!open) handleContextLimitCancel(); }}>
+            <DialogContent showCloseButton={false} className="max-w-sm gap-5">
+                <DialogHeader>
+                    <DialogTitle>{t('chat.chatInput.contextLimit.title')}</DialogTitle>
+                    <DialogDescription>
+                        {(() => {
+                            const currentModel = getCurrentModel();
+                            const limit = currentModel && typeof currentModel.limit === 'object' && currentModel.limit !== null
+                                ? (currentModel.limit as Record<string, unknown>)
+                                : null;
+                            const contextLimit = (limit && typeof limit.context === 'number' ? limit.context : 0);
+                            const outputLimit = (limit && typeof limit.output === 'number' ? limit.output : 0);
+                            const contextUsage = getContextUsage(contextLimit, outputLimit);
+                            const tokens = contextUsage?.totalTokens ?? 0;
+                            const percentage = contextUsage?.percentage ?? 0;
+                            const formatTokens = (t: number) => {
+                                if (t >= 1_000_000) return `${(t / 1_000_000).toFixed(1)}M`;
+                                if (t >= 1_000) return `${(t / 1_000).toFixed(1)}K`;
+                                return t.toString();
+                            };
+                            return t('chat.chatInput.contextLimit.description', {
+                                tokens: formatTokens(tokens),
+                                percentage: percentage.toFixed(1),
+                            });
+                        })()}
+                    </DialogDescription>
+                </DialogHeader>
+                <DialogFooter>
+                    <button
+                        type="button"
+                        onClick={handleContextLimitCancel}
+                        className="inline-flex h-8 items-center justify-center rounded-md border border-border px-3 typography-ui-label text-foreground hover:bg-interactive-hover/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
+                    >
+                        {t('chat.chatInput.contextLimit.cancel')}
+                    </button>
+                    <button
+                        type="button"
+                        onClick={handleContextLimitConfirm}
+                        className="inline-flex h-8 items-center justify-center rounded-md bg-primary px-3 typography-ui-label text-primary-foreground hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
+                    >
+                        {t('chat.chatInput.contextLimit.confirm')}
+                    </button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
         </>
     );
 };
