@@ -2,7 +2,6 @@ import { createConfiguredWebAPIs } from './runtimeConfig';
 import { registerSW } from 'virtual:pwa-register';
 
 import type { RuntimeAPIs } from '@openchamber/ui/lib/api/types';
-import { getStoredMobileLayoutPreference } from '@openchamber/ui/lib/mobileLayoutPreference';
 import type { HostedSurface } from '@openchamber/ui/lib/runtimeSurface';
 import '@openchamber/ui/index.css';
 import '@openchamber/ui/styles/fonts';
@@ -16,24 +15,17 @@ declare global {
 
 window.__OPENCHAMBER_RUNTIME_APIS__ = createConfiguredWebAPIs();
 
-const isCoarsePointer = (): boolean => {
-  if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') {
-    return false;
-  }
-
-  return window.matchMedia('(pointer: coarse)').matches;
-};
-
 const detectHostedSurface = (): HostedSurface => {
   const params = new URLSearchParams(window.location.search);
   const override = params.get('surface');
   if (override === 'mobile') return 'mobile';
   if (override === 'desktop') return 'desktop';
 
-  const width = Math.min(window.innerWidth || 0, window.screen?.width || window.innerWidth || 0);
-  const touchPoints = navigator.maxTouchPoints || 0;
-  const likelyPhone = width > 0 && width <= 760 && (touchPoints > 0 || isCoarsePointer());
-  return likelyPhone && getStoredMobileLayoutPreference() === 'new' ? 'mobile' : 'desktop';
+  // Keep the default web entrypoint on the full desktop surface. The dedicated
+  // mobile connection UI lives behind explicit mobile entrypoints/overrides
+  // (`mobile.html` or `?surface=mobile`); auto-switching phone browsers here
+  // breaks direct browser access to the normal UI auth flow.
+  return 'desktop';
 };
 
 const hostedSurface = detectHostedSurface();

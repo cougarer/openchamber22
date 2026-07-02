@@ -33,6 +33,13 @@ export const createStaticRoutesRuntime = (dependencies) => {
           // Service workers should never be long-cached; iOS is especially sensitive.
           if (typeof filePath === 'string' && filePath.endsWith(`${path.sep}sw.js`)) {
             res.setHeader('Cache-Control', 'no-store');
+            return;
+          }
+
+          // Always revalidate navigation HTML so mobile browsers/PWAs do not keep
+          // serving an old entrypoint after a surface-selection fix ships.
+          if (typeof filePath === 'string' && filePath.endsWith('.html')) {
+            res.setHeader('Cache-Control', 'no-store');
           }
         },
       }));
@@ -48,6 +55,7 @@ export const createStaticRoutesRuntime = (dependencies) => {
       });
 
       app.get(/^(?!\/api|.*\.(js|css|svg|png|jpg|jpeg|gif|ico|woff|woff2|ttf|eot|map)).*$/, (_req, res) => {
+        res.setHeader('Cache-Control', 'no-store');
         res.sendFile(path.join(distPath, 'index.html'));
       });
       return;
