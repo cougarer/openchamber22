@@ -161,6 +161,12 @@ Chat message part rendering and message-row performance expectations.
 
 - Module docs: `packages/ui/src/components/chat/message/parts/DOCUMENTATION.md`
 
+#### context usage display
+
+ContextUsageDisplay component and context usage store logic. Before modifying `ContextUsageDisplay.tsx`, `contextStore.ts`, or any layout file that renders context usage (Header, VSCodeLayout, MiniChatLayout, MobileApp), read the memory doc first.
+
+- Memory doc: `.agents/memory/layout-changes-tips.md`
+
 ## Build / dev commands (verified)
 
 All scripts are in `package.json`.

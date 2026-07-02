@@ -1,6 +1,11 @@
-# ContextUsageDisplay: showTokenCount + 移动端适配
+# 布局修改生效技巧合集
 
-**Date:** 2026-07-02
+修改 UI 布局代码时的常见踩坑和技巧。涵盖构建、HMR、端口等实际问题。
+
+---
+
+## 2026-07-02: ContextUsageDisplay showTokenCount + 移动端适配
+
 **Scope:** `packages/ui/src/components/ui/ContextUsageDisplay.tsx`, `Header.tsx`, `VSCodeLayout.tsx`, `MiniChatLayout.tsx`
 
 ## 改动
