@@ -55,6 +55,7 @@ src/main/resources/webview/
 # Local env
 .env
 .env.local
+password.txt
 
 # IntelliJ plugin (separate project)
 packages/intellij/

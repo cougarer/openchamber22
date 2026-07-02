@@ -61,6 +61,9 @@ type MobileSessionStatus = {
   authenticated?: boolean;
   disabled?: boolean;
   scope?: string;
+  tunnelLocked?: boolean;
+  error?: string;
+  retryAfter?: number;
 };
 
 // ---------------------------------------------------------------------------
@@ -203,6 +206,9 @@ const readSessionStatus = async (response: MobileFetchResponse | null): Promise<
     authenticated: typeof record.authenticated === 'boolean' ? record.authenticated : undefined,
     disabled: typeof record.disabled === 'boolean' ? record.disabled : undefined,
     scope: typeof record.scope === 'string' ? record.scope : undefined,
+    tunnelLocked: record.tunnelLocked === true,
+    error: typeof record.error === 'string' ? record.error : undefined,
+    retryAfter: typeof record.retryAfter === 'number' ? record.retryAfter : undefined,
   };
 };
 
@@ -604,7 +610,24 @@ export const useMobileConnection = (onConnected: () => void): UseMobileConnectio
       });
       logConnect('password:done', { ok: response?.ok === true, status: response?.status ?? null });
       if (!response?.ok) {
-        setError(t('mobile.connect.error.passwordFailed'));
+        const status = await readSessionStatus(response);
+        if (response?.status === 401) {
+          setError(t('mobile.connect.error.passwordFailed'));
+          return;
+        }
+        if (response?.status === 403 && status?.tunnelLocked) {
+          setError(t('mobile.connect.error.tunnelPasswordUnsupported'));
+          return;
+        }
+        if (response?.status === 429) {
+          setError(t('mobile.connect.error.rateLimited'));
+          return;
+        }
+        if (status?.error === 'UI password not configured') {
+          setError(t('mobile.connect.error.authRequired'));
+          return;
+        }
+        setError(t('mobile.connect.error.unlockFailed'));
         return;
       }
 
