@@ -114,7 +114,11 @@ type EmbeddedVisibilityPayload = {
 
 const normalizeEmbeddedDirectory = (value: string | null | undefined): string => {
   if (!value) return '';
-  return value.replace(/\\/g, '/').replace(/\/+$/g, '');
+  const normalized = value
+    .replace(/\\/g, '/')
+    .replace(/^([a-z]):/, (_, letter: string) => letter.toUpperCase() + ':')
+    .replace(/\/+$/g, '');
+  return normalized;
 };
 
 const readEmbeddedSessionChatConfig = (): EmbeddedSessionChatConfig | null => {
@@ -563,7 +567,7 @@ function App({ apis }: AppProps) {
       return;
     }
 
-    if (currentDirectory === embeddedSessionChat.directory) {
+    if (normalizeEmbeddedDirectory(currentDirectory) === normalizeEmbeddedDirectory(embeddedSessionChat.directory)) {
       return;
     }
 
