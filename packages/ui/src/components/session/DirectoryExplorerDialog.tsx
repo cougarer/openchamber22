@@ -37,7 +37,11 @@ type BrowseRow =
   | { type: 'up'; value: 'browse:up'; name: string; path: string | null; disabled?: false }
   | { type: 'directory'; value: string; name: string; path: string; disabled: boolean };
 
-const isRootPath = (value: string): boolean => value === '/';
+const isRootPath = (value: string): boolean => {
+  if (value === '/') return true;
+  // Windows drive root: "C:/" or "C:\"
+  return /^[A-Z]:\/?$/.test(value);
+};
 
 const normalizeSeparators = (value: string): string => value.replace(/\\/g, '/');
 
@@ -75,6 +79,8 @@ const getBrowseLeafPathSegment = (value: string): string => {
 const getBrowseParentPath = (value: string): string | null => {
   const trimmed = trimTrailingSeparators(value.trim());
   if (!trimmed || trimmed === '~' || trimmed === '~/' || trimmed === '/') return null;
+  // Windows drive root: "C:/" or "C:\"
+  if (/^[A-Z]:\/?$/.test(trimmed)) return null;
   const lastSeparator = getLastPathSeparatorIndex(trimmed);
   if (lastSeparator < 0) return null;
   if (trimmed.startsWith('~/') && lastSeparator <= 1) return '~/';
@@ -92,7 +98,8 @@ const normalizeDirectoryPath = (path: string | null | undefined): string | null 
   if (!path) return null;
   const normalized = trimTrailingSeparators(normalizeSeparators(path.trim()));
   if (!normalized) return null;
-  return normalized.toLowerCase();
+  // Preserve uppercase drive letter for Windows paths (e.g., "D:/" not "d:/")
+  return normalized.replace(/^([a-z]):/, (_, letter: string) => letter.toUpperCase() + ':');
 };
 
 const displayPathToAbsolutePath = (value: string, homeDirectory: string): string => {

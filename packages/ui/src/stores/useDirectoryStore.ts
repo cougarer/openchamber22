@@ -343,6 +343,11 @@ export const useDirectoryStore = create<DirectoryStore>()(
           return;
         }
 
+        // Windows drive root: "C:/" or "C:"
+        if (/^[A-Z]:\/?$/.test(currentDirectory)) {
+          return;
+        }
+
         const cleanPath = currentDirectory.endsWith('/')
           ? currentDirectory.slice(0, -1)
           : currentDirectory;
@@ -354,7 +359,13 @@ export const useDirectoryStore = create<DirectoryStore>()(
         } else if (lastSlash === 0) {
           setDirectory('/');
         } else {
-          setDirectory(cleanPath.substring(0, lastSlash));
+          const parentPath = cleanPath.substring(0, lastSlash);
+          // Windows drive root check for parent path
+          if (/^[A-Z]:$/.test(parentPath)) {
+            setDirectory(`${parentPath}/`);
+          } else {
+            setDirectory(parentPath);
+          }
         }
       },
 
