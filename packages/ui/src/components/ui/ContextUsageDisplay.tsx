@@ -16,6 +16,7 @@ interface ContextUsageDisplayProps {
   isMobile?: boolean;
   hideIcon?: boolean;
   showPercentIcon?: boolean;
+  showTokenCount?: boolean;
   className?: string;
   valueClassName?: string;
   percentIconClassName?: string;
@@ -33,6 +34,7 @@ export const ContextUsageDisplay: React.FC<ContextUsageDisplayProps> = ({
   isMobile = false,
   hideIcon = false,
   showPercentIcon = false,
+  showTokenCount = false,
   className,
   valueClassName,
   percentIconClassName,
@@ -85,7 +87,9 @@ export const ContextUsageDisplay: React.FC<ContextUsageDisplayProps> = ({
     <>
       {!isMobile && !hideIcon && <Icon name="donut-chart" className="h-4 w-4 flex-shrink-0" />}
       <span className={cn('font-medium inline-flex items-center gap-1.5', valueClassName)}>
-        {showPercentIcon ? (
+        {showTokenCount ? (
+          <span className={getPercentageColor(colorPct)}>{formatTokens(totalTokens)}</span>
+        ) : showPercentIcon ? (
           <>
             <svg
               viewBox={`0 0 ${circularProgressSize} ${circularProgressSize}`}

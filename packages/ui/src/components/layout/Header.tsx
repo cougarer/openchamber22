@@ -2198,7 +2198,7 @@ export const Header: React.FC<HeaderProps> = ({
               outputLimit={stableDesktopContextUsage.outputLimit ?? 0}
               size="compact"
               hideIcon
-              showPercentIcon
+              showTokenCount
               onClick={handleOpenContextPanel}
               pressed={isContextPanelActive}
               className={!showMiniChatHeaderAction ? 'mr-3.5' : ''}
@@ -2328,6 +2328,20 @@ export const Header: React.FC<HeaderProps> = ({
           </div>
 
           <div className="flex items-center gap-1 shrink-0">
+            {showDesktopHeaderContextUsage && stableDesktopContextUsage && (
+              <ContextUsageDisplay
+                totalTokens={stableDesktopContextUsage.totalTokens}
+                percentage={desktopHeaderDisplayPercentage}
+                colorPercentage={stableDesktopContextUsage.percentage}
+                contextLimit={stableDesktopContextUsage.contextLimit}
+                outputLimit={stableDesktopContextUsage.outputLimit ?? 0}
+                size="compact"
+                isMobile
+                hideIcon
+                showTokenCount
+                className="h-9"
+              />
+            )}
             {projectActionsContext && (
               <ProjectActionsButton
                 projectRef={projectActionsContext.projectRef}

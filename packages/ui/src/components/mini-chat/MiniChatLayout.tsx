@@ -292,7 +292,7 @@ const MiniChatHeader: React.FC<{ mode: MiniChatMode }> = ({ mode }) => {
           className="h-9 shrink-0 pl-1 pr-1 typography-ui-label"
           valueClassName="font-semibold leading-none"
           hideIcon
-          showPercentIcon
+          showTokenCount
           percentIconClassName="h-4.5 w-4.5"
         />
       ) : null}
